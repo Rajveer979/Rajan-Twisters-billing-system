@@ -7,7 +7,7 @@ import re
 import io
 
 # --- CONFIGURATION ---
-API_KEY = "AIzaSyDxBT0LhrpISRJXd6Jv5hfiIaSmzUTBWKA"
+API_KEY = st.secrets.get("GEMINI_API_KEY", "AIzaSyDxBT0LhrpISRJXd6Jv5hfiIaSmzUTBWKA")
 client = genai.Client(api_key=API_KEY)
 MODEL_ID = "gemini-3-flash-preview"
 
