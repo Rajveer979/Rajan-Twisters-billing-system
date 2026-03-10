@@ -7,7 +7,10 @@ import re
 import io
 
 # --- CONFIGURATION ---
-API_KEY = st.secrets.get("GEMINI_API_KEY", "AIzaSyDxBT0LhrpISRJXd6Jv5hfiIaSmzUTBWKA")
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+except:
+    API_KEY = "AIzaSyDxBT0LhrpISRJXd6Jv5hfiIaSmzUTBWKA"
 client = genai.Client(api_key=API_KEY)
 MODEL_ID = "gemini-3-flash-preview"
 
@@ -112,18 +115,11 @@ if final_weights:
         # ── 1. TOP STRIP ─────────────────────────────
         pdf.set_xy(M, M)
         pdf.set_font("Arial", 'B', 8)
-        pdf.cell(IW/2, 5, "TAX INVOICE", border=0, ln=0, align='L')
-        pdf.cell(IW/2, 5, f"R. {bill_no}", border=0, ln=1, align='R')
-
-        # ── 2. BLESSING + MOBILE (same line visually) ─
-        # Blessing centred, mobile right
-        blessing_y = pdf.get_y()
+        pdf.cell(IW/3, 5, "TAX INVOICE", border=0, ln=0, align='L')
         pdf.set_font("Arial", 'I', 8)
-        pdf.set_xy(M, blessing_y)
-        pdf.cell(IW, 5, "|| Shree Ganeshay Namah ||", border=0, ln=0, align='C')
+        pdf.cell(IW/3, 5, "|| Shree Ganeshay Namah ||", border=0, ln=0, align='C')
         pdf.set_font("Arial", '', 8)
-        pdf.set_xy(M, blessing_y)
-        pdf.cell(IW, 5, "M. 98257 71671", border=0, ln=1, align='R')
+        pdf.cell(IW/3, 5, "M. 98257 71671", border=0, ln=1, align='R')
 
         # ── 3. LOGO + COMPANY NAME ───────────────────
         logo_y = pdf.get_y()
@@ -133,7 +129,7 @@ if final_weights:
         pdf.set_xy(M, logo_y)
         pdf.set_font("Arial", 'B', 26)
         pdf.set_text_color(180, 0, 0)
-        pdf.cell(IW, 13, "RAJAN Twisters", border=0, ln=1, align='C')
+        pdf.cell(IW, 13, "RAJAN TWISTERS", border=0, ln=1, align='C')
         pdf.set_text_color(0, 0, 0)
 
         pdf.set_x(M)
@@ -221,7 +217,7 @@ if final_weights:
         used_x = M + GL_W + 15 * BOX_W
         hsn_w  = PAGE_W - M - used_x
         pdf.set_x(used_x)
-        pdf.cell(hsn_w, CH, "  HSN Code ::", border=1, ln=1, align='L')
+        pdf.cell(hsn_w, CH, "  HSN Code :: 5407", border=1, ln=1, align='L')
         pdf.ln(1)
 
         # ── 6. TABLE HEADER ──────────────────────────
@@ -234,7 +230,7 @@ if final_weights:
         pdf.cell(C_AMT,  HH, "AMOUNT Rs.",         border=1, ln=0, align='C')
         pdf.cell(C_PS,   HH, "Ps.",                border=1, ln=1, align='C')
 
-        # ── 7. DATA ROW ──────────────────────────────
+        # ── 7. DATA ROW + empty rows below ──────────────────────────────
         pdf.set_font("Arial", '', 9)
         pdf.set_x(M)
         pdf.cell(C_DESC, RH, "  ART SILK CLOTH",      border='LRB', ln=0, align='L')
@@ -244,7 +240,7 @@ if final_weights:
         pdf.cell(C_AMT,  RH, f"{amt_rs}",               border='LRB', ln=0, align='R')
         pdf.cell(C_PS,   RH, f"{amt_ps:02d}",           border='LRB', ln=1, align='C')
 
-        # 5 empty rows
+        # 5 empty rows with full borders
         for _ in range(5):
             pdf.set_x(M)
             pdf.cell(C_DESC, RH, "", border='LRB', ln=0)
@@ -329,7 +325,7 @@ if final_weights:
         # Signature block
         pdf.set_xy(M + TERMS_W, TS_Y + 2)
         pdf.set_font("Arial", 'B', 9)
-        pdf.cell(SIG_W, 7, "For, RAJAN Twisters", border=0, ln=0, align='C')
+        pdf.cell(SIG_W, 7, "For, RAJAN TWISTERS", border=0, ln=0, align='C')
 
         sig_line_y = TS_Y + BLOCK_H - 7
         pdf.line(M + TERMS_W + 3, sig_line_y,
@@ -339,234 +335,216 @@ if final_weights:
         pdf.cell(SIG_W, 5, "Authorised Signatory", border=0, ln=1, align='C')
 
         # ══════════════════════════════════════════════
-        # PAGE 2 — DELIVERY CHALLAN (new design)
-        # All Y positions ABSOLUTE — no overlap possible
+        # PAGE 2 — TWO DELIVERY CHALLANS (top half + bottom half)
+        # Each challan is identical — same data, same design
+        # Page height 297mm split: top challan 0-145mm, bottom 150-297mm
         # ══════════════════════════════════════════════
         pdf.add_page()
         pdf.set_margins(M, M, M)
         pdf.set_auto_page_break(False)
 
-        P2_M  = M        #  8mm
+        P2_M  = M
         P2_IW = IW       # 194mm
-        PH    = 297      # A4 height
 
-        # ── Page layout split: Left 58% | Right 42% ──
-        LEFT_W  = round(P2_IW * 0.58)   # ~113mm  (meter values side)
-        RIGHT_W = P2_IW - LEFT_W         # ~81mm   (info side)
-        RIGHT_X = P2_M + LEFT_W
+        # ── Challan dimensions ──
+        # Each challan gets ~143mm height, with a 4mm divider line between them
+        CHALLAN_H  = 143   # height of each challan block
+        DIVIDER_Y  = M + CHALLAN_H + 2   # thin line between the two challans
 
-        # ── Fixed Y anchors ──
-        Y_TOP_ROW  =  8    # "Delivery challan" / blessing / mobile row
-        Y_TITLE    = 13    # "Rajan Twisters" big title
-        Y_ADDRESS  = 24    # address line
-        Y_MANUF    = 29    # "MANUFACTURES AND DEALER..." + GSTIN row
-        Y_INFO     = 36    # M/s / Challan No / Date / Broker / Quality block
-        Y_BLANK    = 65    # blank separator row
-        Y_DATA     = 70    # meter values start
-        ROW_H      =  7    # each meter row height
+        # ── Draw divider line ──
+        pdf.set_draw_color(150, 150, 150)
+        pdf.set_line_width(0.5)
+        pdf.line(P2_M, DIVIDER_Y, P2_M + P2_IW, DIVIDER_Y)
+        pdf.set_draw_color(0, 0, 0)
+        pdf.set_line_width(0.2)
 
-        # Number of meter rows = fixed 12-row grid + 1 total row
-        n_vals    = len(final_weights)
-        GRID_COLS = 8
-        GRID_ROWS = 12
-        Y_DATA_END = Y_DATA + (GRID_ROWS + 1) * ROW_H   # 12 data + 1 total row
+        # ══════════════════════════════════════════════
+        # HELPER FUNCTION — draws one complete challan
+        # Y_OFF = vertical offset (0 for top, ~148 for bottom)
+        # ══════════════════════════════════════════════
+        def draw_challan(Y_OFF):
+            # All Y values are relative to Y_OFF
+            # Layout constants
+            CW       = P2_IW          # challan inner width = 194mm
+            LEFT_W   = round(CW * 0.58)
+            RIGHT_W  = CW - LEFT_W
+            RIGHT_X  = P2_M + LEFT_W
 
-        # Right-side content rows (aligned with data area)
-        Y_TOTAL_PCS  = Y_DATA             # "Total Pieces" sits at top of data
-        Y_TOTAL_MTRS = Y_DATA + 14        # "Total Meters" two rows below
+            # Fixed Y anchors (relative)
+            Y0  = Y_OFF + M          # top of challan content
+            Y_TOP_ROW = Y0
+            Y_TITLE   = Y0 + 5
+            Y_ADDRESS = Y0 + 15
+            Y_MANUF   = Y0 + 20
+            Y_INFO    = Y0 + 27
+            INFO_ROW_H = 6
+            Y_BLANK   = Y_INFO + 4 * INFO_ROW_H + 1
+            Y_DATA    = Y_BLANK + 4
+            ROW_H     = 5.5
+            GRID_COLS = 8
+            GRID_ROWS = 12
+            GC_W      = LEFT_W / GRID_COLS
 
-        Y_NODYE      = Y_DATA + 40        # "NO DYEING GUARANTEE"
-        Y_NODYE_TEXT = Y_NODYE + 10       # disclaimer text
+            Y_DATA_END   = Y_DATA + (GRID_ROWS + 1) * ROW_H
+            Y_TOTAL_PCS  = Y_DATA
+            Y_TOTAL_MTRS = Y_DATA + INFO_ROW_H * 2
+            Y_NODYE      = Y_DATA + INFO_ROW_H * 5
+            Y_SIG        = Y_DATA_END + 2
 
-        # Bottom signature row
-        Y_SIG = Y_DATA_END + 6
+            # ── ROW 1: Delivery challan (L) | blessing (C) | Mobile (R) ──
+            # Equal 3-way split so blessing is truly centered
+            THIRD = CW / 3
+            pdf.set_xy(P2_M, Y_TOP_ROW)
+            pdf.set_font("Arial", '', 7)
+            pdf.cell(THIRD, 5, "Delivery challan",            border=1, ln=0, align='L')
+            pdf.set_font("Arial", 'B', 7)
+            pdf.cell(THIRD, 5, "!! shree Ganeshay Namah !!",  border=1, ln=0, align='C')
+            pdf.set_font("Arial", '', 7)
+            pdf.cell(THIRD, 5, "Mobile No.:  9898130771",     border=1, ln=0, align='R')
 
-        # ── Number of meter columns in left area — unused, grid defined below ──
+            # ── ROW 2: Rajan Twisters title ──
+            pdf.set_xy(P2_M, Y_TITLE)
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(CW, 9, "Rajan Twisters", border=1, ln=0, align='C')
 
-        # ════════════════════════════════════════════
-        # ROW 1 — "Delivery challan" | blessing | Mobile
-        # ════════════════════════════════════════════
-        pdf.set_xy(P2_M, Y_TOP_ROW)
-        pdf.set_font("Arial", '', 8)
-        pdf.cell(LEFT_W / 3, 5, "Delivery challan", border=1, ln=0, align='L')
-        pdf.set_font("Arial", 'B', 8)
-        pdf.cell(LEFT_W / 3, 5, "!! shree Ganeshay Namah !!", border=1, ln=0, align='C')
-        pdf.set_font("Arial", '', 8)
-        pdf.cell(P2_IW - 2*(LEFT_W/3), 5, f"Mobile No.:  9898130771", border=1, ln=0, align='L')
+            # ── ROW 3: Address ──
+            pdf.set_xy(P2_M, Y_ADDRESS)
+            pdf.set_font("Arial", '', 7)
+            pdf.cell(CW, 4,
+                     "192, hariom small scale Ind Society-1, bamroli main road, bamroli, surat",
+                     border=1, ln=0, align='C')
 
-        # ════════════════════════════════════════════
-        # ROW 2 — "Rajan Twisters" big centered title
-        # ════════════════════════════════════════════
-        pdf.set_xy(P2_M, Y_TITLE)
-        pdf.set_font("Arial", 'B', 20)
-        pdf.cell(P2_IW, 10, "Rajan Twisters", border=1, ln=0, align='C')
+            # ── ROW 4: MANUFACTURES | GSTIN ──
+            pdf.set_xy(P2_M, Y_MANUF)
+            pdf.set_font("Arial", 'B', 7)
+            pdf.cell(LEFT_W, 6, "MANUFACTURES AND DEALER IN ART SILK CLOTH", border=1, ln=0, align='L')
+            pdf.cell(RIGHT_W, 6, "GSTIN :  24AAPPM5382C1ZN  HSN: 5407", border=1, ln=0, align='L')
 
-        # ════════════════════════════════════════════
-        # ROW 3 — Address centered
-        # ════════════════════════════════════════════
-        pdf.set_xy(P2_M, Y_ADDRESS)
-        pdf.set_font("Arial", '', 8)
-        pdf.cell(P2_IW, 5,
-                 "192, hariom small scale Ind Society-1,bamroli main road,bamroli,surat",
-                 border=1, ln=0, align='C')
+            # ── Word-wrap address for info block ──
+            INFO_LBL   = 20
+            INFO_VAL_L = LEFT_W - INFO_LBL
+            INFO_VAL_R = RIGHT_W - INFO_LBL
+            pdf.set_font("Arial", '', 7)
+            addr_max = INFO_VAL_L - 4
+            words_a  = address.split()
+            al1, al2 = "", ""
+            for w in words_a:
+                test = (al1 + " " + w).strip()
+                if pdf.get_string_width(test) <= addr_max:
+                    al1 = test
+                else:
+                    al2 = (al2 + " " + w).strip()
+            if al2 and pdf.get_string_width(al2) > addr_max:
+                al2 = al2[:int(len(al2) * addr_max / pdf.get_string_width(al2))]
 
-        # ════════════════════════════════════════════
-        # ROW 4 — "MANUFACTURES AND DEALER..." | GSTIN
-        # ════════════════════════════════════════════
-        pdf.set_xy(P2_M, Y_MANUF)
-        pdf.set_font("Arial", 'B', 8)
-        pdf.cell(LEFT_W, 6, "MANUFACTURES AND DEALER IN ART SILK CLOTH", border=1, ln=0, align='L')
-        pdf.cell(RIGHT_W, 6, f"GSTIN :  24AAPPM5382C1ZN", border=1, ln=0, align='L')
+            # ── Left info block ──
+            left_info = [
+                ("M/s. :",  buyer,       7),
+                ("Add. :",  al1,         7),
+                ("",        al2,         6.5),
+                ("GSTIN :", gstin_buyer, 7),
+            ]
+            for i, (lbl, val, fsz) in enumerate(left_info):
+                iy = Y_INFO + i * INFO_ROW_H
+                pdf.set_xy(P2_M, iy)
+                pdf.set_font("Arial", 'B', 7)
+                pdf.cell(INFO_LBL, INFO_ROW_H, lbl, border=1, ln=0, align='L')
+                pdf.set_font("Arial", '', fsz)
+                pdf.cell(INFO_VAL_L, INFO_ROW_H, f"  {val}", border=1, ln=0, align='L')
 
-        # ════════════════════════════════════════════
-        # INFO BLOCK — Left: M/s, Add (wrapped), GSTIN | Right: Challan No, Date, Broker, Quality
-        # Address is word-wrapped into 2 rows to prevent overflow
-        # ════════════════════════════════════════════
-        INFO_ROW_H = 7
-        INFO_LBL   = 22    # label width inside info block
-        INFO_VAL_L = LEFT_W - INFO_LBL
-        INFO_VAL_R = RIGHT_W - INFO_LBL
+            # ── Right info block ──
+            right_info = [
+                ("Challan No. :", bill_no),
+                ("Date :",        date),
+                ("Broker :",      broker),
+                ("Quality :",     ""),
+            ]
+            for i, (lbl, val) in enumerate(right_info):
+                iy = Y_INFO + i * INFO_ROW_H
+                pdf.set_xy(RIGHT_X, iy)
+                pdf.set_font("Arial", 'B', 7)
+                pdf.cell(INFO_LBL, INFO_ROW_H, lbl, border=1, ln=0, align='L')
+                pdf.set_font("Arial", '', 7)
+                pdf.cell(INFO_VAL_R, INFO_ROW_H, f"  {val}", border=1, ln=0, align='L')
 
-        # ── Word-wrap address to fit INFO_VAL_L ──
-        pdf.set_font("Arial", '', 8)
-        addr_max = INFO_VAL_L - 4
-        words_a  = address.split()
-        addr_l1, addr_l2 = "", ""
-        for w in words_a:
-            test = (addr_l1 + " " + w).strip()
-            if pdf.get_string_width(test) <= addr_max:
-                addr_l1 = test
-            else:
-                addr_l2 = (addr_l2 + " " + w).strip()
-        # If line2 still overflows, shrink font
-        if pdf.get_string_width(addr_l2) > addr_max:
-            addr_l2 = addr_l2[:int(len(addr_l2)*addr_max/pdf.get_string_width(addr_l2))]
+            # ── Blank separator ──
+            pdf.set_xy(P2_M, Y_BLANK)
+            pdf.cell(LEFT_W, 3, "", border=1, ln=0)
+            pdf.cell(RIGHT_W, 3, "", border=1, ln=0)
 
-        # Left info block — 4 rows: M/s | Add line1 | Add line2 (or blank) | GSTIN
-        left_info = [
-            ("M/s. :",  buyer,    8),
-            ("Add. :",  addr_l1,  8),
-            ("",        addr_l2,  7),
-            ("GSTIN :", gstin_buyer, 8),
-        ]
-        for i, (lbl, val, fsz) in enumerate(left_info):
-            iy = Y_INFO + i * INFO_ROW_H
-            pdf.set_xy(P2_M, iy)
-            pdf.set_font("Arial", 'B', 8)
-            pdf.cell(INFO_LBL, INFO_ROW_H, lbl, border=1, ln=0, align='L')
-            pdf.set_font("Arial", '', fsz)
-            pdf.cell(INFO_VAL_L, INFO_ROW_H, f"  {val}", border=1, ln=0, align='L')
+            # ── Meter grid: 8 cols x 12 rows, column-first ──
+            vals = list(final_weights[:GRID_COLS * GRID_ROWS])
+            pdf.set_font("Arial", '', 6.5)
+            for ri in range(GRID_ROWS):
+                ry = Y_DATA + ri * ROW_H
+                for ci in range(GRID_COLS):
+                    idx = ci * GRID_ROWS + ri
+                    v   = vals[idx] if idx < len(vals) else None
+                    txt = f"{v:.2f}" if v is not None else ""
+                    pdf.set_xy(P2_M + ci * GC_W, ry)
+                    pdf.cell(GC_W, ROW_H, txt, border=1, ln=0, align='R')
 
-        # Right info block — 4 rows aligned with left
-        info_rows_right = [
-            ("Challan No. :", bill_no),
-            ("Date :",        date),
-            ("Broker :",      broker),
-            ("Quality :",     ""),
-        ]
-        for i, (lbl, val) in enumerate(info_rows_right):
-            iy = Y_INFO + i * INFO_ROW_H
-            pdf.set_xy(RIGHT_X, iy)
-            pdf.set_font("Arial", 'B', 8)
-            pdf.cell(INFO_LBL, INFO_ROW_H, lbl, border=1, ln=0, align='L')
-            pdf.set_font("Arial", '', 8)
-            pdf.cell(INFO_VAL_R, INFO_ROW_H, f"  {val}", border=1, ln=0, align='L')
-
-        # ════════════════════════════════════════════
-        # BLANK SEPARATOR ROW (thin)
-        # ════════════════════════════════════════════
-        pdf.set_xy(P2_M, Y_BLANK)
-        pdf.cell(LEFT_W, 4, "", border=1, ln=0)
-        pdf.cell(RIGHT_W, 4, "", border=1, ln=0)
-
-        # ════════════════════════════════════════════
-        # METER VALUE GRID — 8 columns x 12 rows = 96 capacity
-        # Filling ORDER: column by column (12 values per column)
-        # So 48 values → fills first 4 columns, last 4 columns stay empty
-        # ════════════════════════════════════════════
-        GRID_COLS = 8
-        GRID_ROWS = 12
-        GC_W = LEFT_W / GRID_COLS   # ~14mm per column
-
-        # Re-arrange values: column-first order
-        # grid[row][col] = value at position col*12 + row
-        vals = list(final_weights[:GRID_COLS * GRID_ROWS])
-
-        pdf.set_font("Arial", '', 7)
-        for ri in range(GRID_ROWS):
-            ry = Y_DATA + ri * ROW_H
+            # ── Total row ──
+            total_row_y = Y_DATA + GRID_ROWS * ROW_H
+            pdf.set_font("Arial", 'B', 6.5)
             for ci in range(GRID_COLS):
-                idx = ci * GRID_ROWS + ri   # column-first: col0 rows 0-11, col1 rows 0-11...
-                v   = vals[idx] if idx < len(vals) else None
-                txt = f"{v:.2f}" if v is not None else ""
-                pdf.set_xy(P2_M + ci * GC_W, ry)
+                col_idxs = range(ci * GRID_ROWS, min((ci + 1) * GRID_ROWS, len(vals)))
+                col_sum  = sum(vals[i] for i in col_idxs) if col_idxs else 0
+                txt = f"{col_sum:.2f}" if any(True for _ in col_idxs) else ""
+                pdf.set_xy(P2_M + ci * GC_W, total_row_y)
                 pdf.cell(GC_W, ROW_H, txt, border=1, ln=0, align='R')
 
-        # TOTAL row — per-column sub-totals
-        total_row_y = Y_DATA + GRID_ROWS * ROW_H
-        pdf.set_font("Arial", 'B', 7)
-        for ci in range(GRID_COLS):
-            col_idxs = range(ci * GRID_ROWS, min((ci + 1) * GRID_ROWS, len(vals)))
-            col_sum  = sum(vals[i] for i in col_idxs) if col_idxs else 0
-            txt = f"{col_sum:.2f}" if any(True for _ in col_idxs) else ""
-            pdf.set_xy(P2_M + ci * GC_W, total_row_y)
-            pdf.cell(GC_W, ROW_H, txt, border=1, ln=0, align='R')
+            # ── Right side: Total Pieces / Meters / NO DYEING ──
+            R_LBL = 36
+            R_VAL = RIGHT_W - R_LBL
 
-        # ════════════════════════════════════════════
-        # RIGHT SIDE — Total Pieces / Total Meters / NO DYEING / disclaimer
-        # ════════════════════════════════════════════
-        R_LBL = 38
-        R_VAL = RIGHT_W - R_LBL
+            pdf.set_xy(RIGHT_X, Y_TOTAL_PCS)
+            pdf.set_font("Arial", 'B', 7)
+            pdf.cell(R_LBL, INFO_ROW_H, "Total Pieces :", border=1, ln=0, align='R')
+            pdf.set_font("Arial", '', 8)
+            pdf.cell(R_VAL, INFO_ROW_H, f"  {len(final_weights)}", border=1, ln=0, align='C')
 
-        # Total Pieces row
-        pdf.set_xy(RIGHT_X, Y_TOTAL_PCS)
-        pdf.set_font("Arial", 'B', 8)
-        pdf.cell(R_LBL, INFO_ROW_H, "Total Pieces :", border=1, ln=0, align='R')
-        pdf.set_font("Arial", '', 9)
-        pdf.cell(R_VAL, INFO_ROW_H, f"  {n_vals}", border=1, ln=0, align='C')
-
-        # blank spacer
-        pdf.set_xy(RIGHT_X, Y_TOTAL_PCS + INFO_ROW_H)
-        pdf.cell(RIGHT_W, INFO_ROW_H, "", border=1, ln=0)
-
-        # Total Meters row
-        pdf.set_xy(RIGHT_X, Y_TOTAL_MTRS)
-        pdf.set_font("Arial", 'B', 8)
-        pdf.cell(R_LBL, INFO_ROW_H, "Total Meters :", border=1, ln=0, align='R')
-        pdf.set_font("Arial", '', 9)
-        pdf.cell(R_VAL, INFO_ROW_H, f"  {total_mtrs:.2f}", border=1, ln=0, align='C')
-
-        # blank rows between Total Meters and NO DYEING
-        for bi in range(3):
-            pdf.set_xy(RIGHT_X, Y_TOTAL_MTRS + INFO_ROW_H + bi * INFO_ROW_H)
+            pdf.set_xy(RIGHT_X, Y_TOTAL_PCS + INFO_ROW_H)
             pdf.cell(RIGHT_W, INFO_ROW_H, "", border=1, ln=0)
 
-        # NO DYEING GUARANTEE
-        pdf.set_xy(RIGHT_X, Y_NODYE)
-        pdf.set_font("Arial", 'B', 10)
-        pdf.set_text_color(180, 0, 0)
-        pdf.cell(RIGHT_W, 8, "NO DYEING GUARANTEE", border=1, ln=0, align='C')
-        pdf.set_text_color(0, 0, 0)
+            pdf.set_xy(RIGHT_X, Y_TOTAL_MTRS)
+            pdf.set_font("Arial", 'B', 7)
+            pdf.cell(R_LBL, INFO_ROW_H, "Total Meters :", border=1, ln=0, align='R')
+            pdf.set_font("Arial", '', 8)
+            pdf.cell(R_VAL, INFO_ROW_H, f"  {total_mtrs:.2f}", border=1, ln=0, align='C')
 
-        # Disclaimer text (multi-line)
-        disclaimer = ("Out despatching goods will not be any type of marking on "
-                      "it's otherwise,we will not accepted return the same.")
-        pdf.set_xy(RIGHT_X, Y_NODYE + 9)
-        pdf.set_font("Arial", '', 7)
-        pdf.multi_cell(RIGHT_W, 4.5, disclaimer, border=1, align='C')
+            for bi in range(2):
+                pdf.set_xy(RIGHT_X, Y_TOTAL_MTRS + INFO_ROW_H * (bi + 1))
+                pdf.cell(RIGHT_W, INFO_ROW_H, "", border=1, ln=0)
 
-        # ════════════════════════════════════════════
-        # BOTTOM — Prepared by | Receiver's stamp & Signature
-        # ════════════════════════════════════════════
-        pdf.set_xy(P2_M, Y_SIG)
-        pdf.set_font("Arial", '', 8)
-        HALF = P2_IW / 2
-        pdf.cell(HALF, 7,
-                 "Prepared by :-  ____________________",
-                 border=1, ln=0, align='L')
-        pdf.cell(HALF, 7,
-                 "Receiver's stamp & Signature:-  ____________________",
-                 border=1, ln=0, align='L')
+            # NO DYEING GUARANTEE
+            pdf.set_xy(RIGHT_X, Y_NODYE)
+            pdf.set_font("Arial", 'B', 9)
+            pdf.set_text_color(180, 0, 0)
+            pdf.cell(RIGHT_W, 7, "NO DYEING GUARANTEE", border=1, ln=0, align='C')
+            pdf.set_text_color(0, 0, 0)
+
+            # Disclaimer
+            disclaimer = ("Out despatching goods will not be any type of marking on "
+                          "it's otherwise,we will not accepted return the same.")
+            pdf.set_xy(RIGHT_X, Y_NODYE + 7)
+            pdf.set_font("Arial", '', 6.5)
+            pdf.multi_cell(RIGHT_W, 4, disclaimer, border=1, align='C')
+
+            # ── Bottom: Prepared by | Receiver stamp ──
+            pdf.set_xy(P2_M, Y_SIG)
+            pdf.set_font("Arial", '', 7)
+            HALF = CW / 2
+            pdf.cell(HALF, 6, "Prepared by :-  ____________________",
+                     border=1, ln=0, align='L')
+            pdf.cell(HALF, 6, "Receiver's stamp & Signature:-  ________________",
+                     border=1, ln=0, align='L')
+
+        # ── Draw top challan (Y offset = 0, starts at margin) ──
+        draw_challan(0)
+
+        # ── Draw bottom challan (Y offset = half page) ──
+        draw_challan(148)
 
         pdf_bytes = pdf.output()
         st.download_button("📥 Download Official Rajan PDF",
