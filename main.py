@@ -565,6 +565,8 @@ if final_weights:
         draw_challan(148)
 
         pdf_bytes = pdf.output()
+        from datetime import datetime
+        today = datetime.now().strftime("%d-%m-%Y")
         st.download_button("📥 Download Official Rajan PDF",
                            data=bytes(pdf_bytes),
-                           file_name="Rajan_Bill_Final.pdf")
+                           file_name=f"bill_{today}.pdf")
