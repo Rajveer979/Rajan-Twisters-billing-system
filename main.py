@@ -16,9 +16,10 @@ LOGO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAIAAAABc2X6AAAWFUlEQVR4nO1ceXycVbl+
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 except:
-    API_KEY = "AIzaSyDxBT0LhrpISRJXd6Jv5hfiIaSmzUTBWKA"
+    st.error("⚠️ API Key not found. Please add GEMINI_API_KEY to your .streamlit/secrets.toml file.")
+    st.stop()
 client = genai.Client(api_key=API_KEY)
-MODEL_ID = "gemini-3-flash-preview"
+MODEL_ID = "gemini-1.5-flash"
 
 st.set_page_config(page_title="Rajan Twisters AI", layout="wide")
 
@@ -46,8 +47,8 @@ with col_a:
                 raw_found = re.findall(r"\d+\.\d+", response.text)
                 st.session_state.manual_meters = ", ".join(raw_found)
                 st.success("Scan Complete!")
-            except Exception:
-                st.error("Server busy. Please enter values manually.")
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
 
 with col_b:
     meter_input = st.text_area("Verify / Edit Meter Values:", value=st.session_state.manual_meters, height=150)
@@ -63,17 +64,45 @@ except ValueError:
 # --- 2. BILLING DETAILS ---
 if final_weights:
     st.divider()
+
+    # ── Load parties from parties.json (same folder as app) ──
+    import json, os
+    parties = {}
+    parties_file = os.path.join(os.path.dirname(__file__), "parties.json")
+    try:
+        with open(parties_file, "r") as f:
+            parties = json.load(f)
+    except:
+        parties = {"-- Select Party --": {"address": "", "gstin": ""}}
+
+    # ── Party selector ──
+    st.subheader("Select Party")
+    party_names = list(parties.keys())
+    selected = st.selectbox("Choose existing party or select manually below:", party_names)
+
+    # Auto-fill values from selected party
+    if selected and selected != "-- Select Party --":
+        default_buyer   = selected
+        default_address = parties[selected]["address"]
+        default_gstin   = parties[selected]["gstin"]
+        default_broker  = parties[selected].get("broker", "")
+    else:
+        default_buyer   = ""
+        default_address = ""
+        default_gstin   = ""
+        default_broker  = ""
+
     c1, c2 = st.columns(2)
     with c1:
-        buyer = st.text_input("M/s.", "raj")
-        address = st.text_area("Address", "192, hariom small scale Ind Society-1, bamroli, surat")
-        gstin_buyer = st.text_input("GSTIN (Receiver)", "24AABCDE1234A1Z1")
+        buyer       = st.text_input("M/s.",               value=default_buyer)
+        address     = st.text_area("Address",             value=default_address)
+        gstin_buyer = st.text_input("GSTIN (Receiver)",   value=default_gstin)
     with c2:
         bill_no = st.text_input("BILL NO.", "2")
-        ch_no = st.text_input("CH. NO.", "2")
-        date = st.text_input("DATE", "07-03-2026")
-        broker = st.text_input("BROKER", "sharma")
-        rate = st.number_input("RATE", value=15.0)
+        ch_no   = st.text_input("CH. NO.", "2")
+        date    = st.text_input("DATE", "07-03-2026")
+        broker  = st.text_input("BROKER", value=default_broker)
+        rate    = st.number_input("RATE", value=15.0)
 
     if st.button("📄 Generate Paper-Style PDF"):
         total_mtrs = sum(final_weights)
@@ -301,6 +330,16 @@ if final_weights:
 
         pdf.set_x(M)
         pdf.cell(LW, 5, "  PAN : AAPPM5382C", border=0, ln=1, align='L')
+
+        pdf.set_x(M)
+        pdf.set_font("Arial", '', 8)
+        pdf.cell(LW, 5, "  Bank Name : Kotak Mahindra Bank", border=0, ln=1, align='L')
+
+        pdf.set_x(M)
+        pdf.cell(LW, 5, "  Account Number : 9825771671", border=0, ln=1, align='L')
+
+        pdf.set_x(M)
+        pdf.cell(LW, 5, "  IFCI Code : kkbk0002864", border=0, ln=1, align='L')
 
         # ── 10. RUPEES IN WORDS ──────────────────────
         words_y = max(totals_bot, pdf.get_y()) + 1
@@ -569,4 +608,4 @@ if final_weights:
         today = datetime.now().strftime("%d-%m-%Y")
         st.download_button("📥 Download Official Rajan PDF",
                            data=bytes(pdf_bytes),
-                           file_name=f"bill_{today}.pdf")
+                           file_name=f"bill_{bill_no}_{today}.pdf")
