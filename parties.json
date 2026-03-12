@@ -1,1 +1,44 @@
+{
+  "-- Select Party --": {
+    "address": "",
+    "gstin": "",
+    "broker": ""
+  },
+  "RESHMA SILK MILLS":{
+    "address":"2007 Mahavir Market",
+    "gstin": "24FYXPM0913E1ZA",
+    "broker": "Denish Gajjar"
+  },
+  "VIJAY DEEP SILK MILLS":{
+    "address":"SY NO. 95-96, SHOP NO. 2094, SURAT TEXTILE MARKET",
+    "gstin": "24AAAPO8721E2ZY",
+    "broker": "self"
+  },
+  "KUNAL ENTERPRISE":{
+    "address":"SHOP NO 2027, MAHAVIR TEXTILE MARKET",
+    "gstin": "24BBCPM2896Q1ZZ",
+    "broker": "Denish Gajjar"
+  },
+  "DHAWAL ENTERPRISE":{
+    "address":"2008, MAHAVIR TEXTILE MARKET",
+    "gstin": "24AWRPM3382L1ZX",
+    "broker": "Denish Gajjar"
+  },
+  "A.P. TEXTILES":{
+    "address":"327, ABHINANDAN TEXTILE MARKET",
+    "gstin": "24ACDPV6412E1ZT",
+    "broker": "self"
+  },
+  "VISHALDEEP SILK MILLS":{
+    "address":"N-2084 SURAT TEXTILE MARKET",
+    "gstin": "24ACBPJ6087H1ZM",
+    "broker": "self"
+  },
+  "Manasvi Fashion":{
+    "address":"1064, GOLWALA MARKET",
+    "gstin": "24ASOPJ5357M2Z5",
+    "broker": "Pravin Patel"
+  }
+  
 
+}
