@@ -78,7 +78,44 @@ if final_weights:
     # ── Party selector ──
     st.subheader("Select Party")
     party_names = list(parties.keys())
-    selected = st.selectbox("Choose existing party or select manually below:", party_names)
+    col_sel, col_btn = st.columns([4, 1])
+    with col_sel:
+        selected = st.selectbox("Choose existing party:", party_names)
+    with col_btn:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("➕ Add Party"):
+            st.session_state["show_add_party"] = True
+
+    if st.session_state.get("show_add_party"):
+        st.markdown("#### ➕ Add New Party")
+        a1, a2 = st.columns(2)
+        with a1:
+            np_name    = st.text_input("Party Name *", key="np_name")
+            np_address = st.text_area("Address", key="np_address")
+        with a2:
+            np_gstin  = st.text_input("GSTIN", key="np_gstin")
+            np_broker = st.text_input("Broker", key="np_broker")
+        s1, s2 = st.columns([1, 5])
+        with s1:
+            if st.button("💾 Save Party"):
+                if np_name.strip():
+                    parties[np_name.strip()] = {
+                        "address": np_address.strip(),
+                        "gstin":   np_gstin.strip(),
+                        "broker":  np_broker.strip()
+                    }
+                    with open(parties_file, "w") as f:
+                        json.dump(parties, f, indent=2, ensure_ascii=False)
+                    st.success(f"✅ '{np_name}' saved!")
+                    st.session_state["show_add_party"] = False
+                    st.rerun()
+                else:
+                    st.error("Please enter a party name.")
+        with s2:
+            if st.button("❌ Cancel"):
+                st.session_state["show_add_party"] = False
+                st.rerun()
+        st.divider()
 
     # Auto-fill values from selected party
     if selected and selected != "-- Select Party --":
