@@ -19,7 +19,7 @@ except:
     st.error("⚠️ API Key not found. Please add GEMINI_API_KEY to your .streamlit/secrets.toml file.")
     st.stop()
 client = genai.Client(api_key=API_KEY)
-MODEL_ID = "gemini-1.5-flash"
+MODEL_ID = "gemini-2.0-flash"
 
 st.set_page_config(page_title="Rajan Twisters AI", layout="wide")
 
@@ -83,8 +83,10 @@ if final_weights:
         selected = st.selectbox("Choose existing party:", party_names)
     with col_btn:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("➕ Add Party"):
-            st.session_state["show_add_party"] = True
+        add_clicked = st.button("➕ Add Party")
+
+    if add_clicked:
+        st.session_state["show_add_party"] = True
 
     if st.session_state.get("show_add_party"):
         st.markdown("#### ➕ Add New Party")
@@ -93,8 +95,9 @@ if final_weights:
             np_name    = st.text_input("Party Name *", key="np_name")
             np_address = st.text_area("Address", key="np_address")
         with a2:
-            np_gstin  = st.text_input("GSTIN", key="np_gstin")
-            np_broker = st.text_input("Broker", key="np_broker")
+            np_gstin   = st.text_input("GSTIN", key="np_gstin")
+            np_broker  = st.text_input("Broker", key="np_broker")
+
         s1, s2 = st.columns([1, 5])
         with s1:
             if st.button("💾 Save Party"):
@@ -106,7 +109,7 @@ if final_weights:
                     }
                     with open(parties_file, "w") as f:
                         json.dump(parties, f, indent=2, ensure_ascii=False)
-                    st.success(f"✅ '{np_name}' saved!")
+                    st.success(f"✅ '{np_name}' saved! Select from dropdown above.")
                     st.session_state["show_add_party"] = False
                     st.rerun()
                 else:
@@ -175,7 +178,7 @@ if final_weights:
         LW = C_DESC + C_PCS + C_TOT           # 122mm
 
         # Row heights
-        RH = 8     # data row
+        RH = 9     # data row
         HH = 7     # header row
         CH = 7     # general cell height
 
@@ -307,35 +310,58 @@ if final_weights:
         # ── 6. TABLE HEADER ──────────────────────────
         pdf.set_x(M)
         pdf.set_font("Arial", 'B', 8)
-        pdf.cell(C_DESC, HH, "DESCRIPTION",        border=1, ln=0, align='C')
+        pdf.cell(C_DESC, HH, "DESCRIPTION",        border=1, ln=0, align='C')   
         pdf.cell(C_PCS,  HH, "PIECES",             border=1, ln=0, align='C')
         pdf.cell(C_TOT,  HH, "TOTAL MTS./KGS.",    border=1, ln=0, align='C')
         pdf.cell(C_RATE, HH, "RATE PER MTR./KG.",  border=1, ln=0, align='C')
         pdf.cell(C_AMT,  HH, "AMOUNT Rs.",         border=1, ln=0, align='C')
         pdf.cell(C_PS,   HH, "Ps.",                border=1, ln=1, align='C')
 
-        # ── 7. DATA ROW + empty rows below ──────────────────────────────
+        # ── 7. DATA ROW (NO horizontal line below) ─────────────────────
         pdf.set_font("Arial", '', 9)
-        pdf.set_x(M)
-        pdf.cell(C_DESC, RH, "  ART SILK CLOTH",      border='LRB', ln=0, align='L')
-        pdf.cell(C_PCS,  RH, str(len(final_weights)),  border='LRB', ln=0, align='C')
-        pdf.cell(C_TOT,  RH, f"{total_mtrs:.2f}",      border='LRB', ln=0, align='C')
-        pdf.cell(C_RATE, RH, f"{rate:.2f}",             border='LRB', ln=0, align='C')
-        pdf.cell(C_AMT,  RH, f"{amt_rs}",               border='LRB', ln=0, align='R')
-        pdf.cell(C_PS,   RH, f"{amt_ps:02d}",           border='LRB', ln=1, align='C')
 
-        # 5 empty rows with full borders
-        for _ in range(5):
-            pdf.set_x(M)
-            pdf.cell(C_DESC, RH, "", border='LRB', ln=0)
-            pdf.cell(C_PCS,  RH, "", border='LRB', ln=0)
-            pdf.cell(C_TOT,  RH, "", border='LRB', ln=0)
-            pdf.cell(C_RATE, RH, "", border='LRB', ln=0)
-            pdf.cell(C_AMT,  RH, "", border='LRB', ln=0)
-            pdf.cell(C_PS,   RH, "", border='LRB', ln=1)
+        pdf.set_x(M)
+
+        pdf.cell(C_DESC, RH, "  ART SILK CLOTH",       border='LR', ln=0, align='L')
+        pdf.cell(C_PCS,  RH, str(len(final_weights)),  border='LR', ln=0, align='C')
+        pdf.cell(C_TOT,  RH, f"{total_mtrs:.2f}",      border='LR', ln=0, align='C')
+        pdf.cell(C_RATE, RH, f"{rate:.2f}",            border='LR', ln=0, align='C')
+        pdf.cell(C_AMT,  RH, f"{amt_rs}",              border='LR', ln=0, align='R')
+        pdf.cell(C_PS,   RH, f"{amt_ps:02d}",          border='LR', ln=1, align='C')
+
+
+        # ─────────────────────────────────────────────
+        # Fill remaining area WITHOUT horizontal lines
+        # ─────────────────────────────────────────────
+
+        TARGET_TABLE_BOTTOM = 195
+
+        current_y = pdf.get_y()
+        remaining_space = TARGET_TABLE_BOTTOM - current_y
+
+        blank_height = max(80, remaining_space)
+
+        pdf.set_x(M)
+
+        pdf.cell(C_DESC, blank_height, "", border='LR', ln=0)
+        pdf.cell(C_PCS,  blank_height, "", border='LR', ln=0)
+        pdf.cell(C_TOT,  blank_height, "", border='LR', ln=0)
+        pdf.cell(C_RATE, blank_height, "", border='LR', ln=0)
+        pdf.cell(C_AMT,  blank_height, "", border='LR', ln=0)
+        pdf.cell(C_PS,   blank_height, "", border='LR', ln=1)
+
+        # Bottom closing border only
+        pdf.set_x(M)
+
+        pdf.cell(C_DESC, 0, "", border='T', ln=0)
+        pdf.cell(C_PCS,  0, "", border='T', ln=0)
+        pdf.cell(C_TOT,  0, "", border='T', ln=0)
+        pdf.cell(C_RATE, 0, "", border='T', ln=0)
+        pdf.cell(C_AMT,  0, "", border='T', ln=0)
+        pdf.cell(C_PS,   0, "", border='T', ln=1)
 
         table_bot = pdf.get_y()
-
+        pdf.ln(2)
         # ── 8. TOTALS (right side, below table) ──────
         def tot_row(lbl, val, bold=False):
             pdf.set_x(TX)
@@ -354,9 +380,9 @@ if final_weights:
 
         # ── 9. LEFT INFO (Due Date / No Dyeing / GSTIN / PAN) ──
         pdf.set_xy(M, table_bot)
-        pdf.set_font("Arial", '', 9)
-        pdf.cell(LW, CH, "  Due Date :", border=0, ln=1, align='L')
 
+        pdf.set_font("Arial", '', 9)
+        pdf.cell(LW, CH, f"  Due Date : {date}", border=0, ln=1, align='L')
         pdf.set_x(M)
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(LW, CH, "  No Dyeing Guarantee", border=0, ln=1, align='L')
@@ -369,15 +395,13 @@ if final_weights:
         pdf.cell(LW, 5, "  PAN : AAPPM5382C", border=0, ln=1, align='L')
 
         pdf.set_x(M)
-        pdf.set_font("Arial", '', 8)
         pdf.cell(LW, 5, "  Bank Name : Kotak Mahindra Bank", border=0, ln=1, align='L')
 
         pdf.set_x(M)
         pdf.cell(LW, 5, "  Account Number : 9825771671", border=0, ln=1, align='L')
 
         pdf.set_x(M)
-        pdf.cell(LW, 5, "  IFCI Code : kkbk0002864", border=0, ln=1, align='L')
-
+        pdf.cell(LW, 5, "  IFSC Code : kkbk0002864", border=0, ln=1, align='L')
         # ── 10. RUPEES IN WORDS ──────────────────────
         words_y = max(totals_bot, pdf.get_y()) + 1
         pdf.set_xy(M, words_y)
