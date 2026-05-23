@@ -8,6 +8,7 @@ import io
 import base64
 import tempfile
 import os
+import pandas as pd
 
 # --- LOGO (embedded as base64 so it works on Streamlit Cloud) ---
 LOGO_B64 = "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"
@@ -23,46 +24,104 @@ MODEL_ID = "gemini-2.0-flash"
 
 st.set_page_config(page_title="Rajan Twisters AI", layout="wide")
 
-if 'manual_meters' not in st.session_state:
-    st.session_state.manual_meters = ""
+
 
 # --- 1. METER ENTRY ---
 st.header("1. Meter Entry")
-uploaded_file = st.file_uploader("Upload Meter Sheet", type=["jpg", "jpeg", "png"])
 
-col_a, col_b = st.columns([1, 2])
-with col_a:
-    if uploaded_file and st.button("🚀 Scan Image"):
-        with st.spinner("AI Scanning..."):
-            try:
-                img = Image.open(uploaded_file)
-                if img.mode in ("RGBA", "P"): img = img.convert("RGB")
-                img_byte_arr = io.BytesIO()
-                img.save(img_byte_arr, format='JPEG', quality=80)
-                prompt = "List all decimal numbers found, separated by commas. No text."
-                response = client.models.generate_content(
-                    model=MODEL_ID,
-                    contents=[prompt, types.Part.from_bytes(data=img_byte_arr.getvalue(), mime_type='image/jpeg')]
-                )
-                raw_found = re.findall(r"\d+\.\d+", response.text)
-                st.session_state.manual_meters = ", ".join(raw_found)
-                st.success("Scan Complete!")
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
 
-with col_b:
-    meter_input = st.text_area("Verify / Edit Meter Values:", value=st.session_state.manual_meters, height=150)
-    st.session_state.manual_meters = meter_input
 
-# Data Processing
-try:
-    final_weights = [float(x.strip()) for x in meter_input.replace('\n', ',').split(',') if x.strip()]
-    final_weights.sort()
-except ValueError:
-    final_weights = []
+# Select entry count
+entry_count = st.selectbox(
+    "Select Meter Entry Count",
+    [48, 96],
+    index=0
+)
+
+# Initialize dataframe
+if (
+    "meter_df" not in st.session_state
+    or len(st.session_state.meter_df) != entry_count
+):
+    st.session_state.meter_df = pd.DataFrame({
+        "Sr No": range(1, entry_count + 1),
+        "Meter": [""] * entry_count
+    })
+
+
+
+# -----------------------------
+# VERIFY / EDIT TABLE
+# -----------------------------
+
+edited_df = st.data_editor(
+    st.session_state.meter_df,
+    use_container_width=True,
+    hide_index=True,
+    num_rows="fixed",
+    height=700,
+    column_config={
+        "Sr No": st.column_config.NumberColumn(
+            "Sr No",
+            disabled=True,
+            width="small"
+        ),
+        "Meter": st.column_config.TextColumn(
+            "Meter",
+            width="medium"
+        )
+    }
+)
+
+# Save updated table
+st.session_state.meter_df = edited_df
+
+# -----------------------------
+# PROCESS VALUES
+# -----------------------------
+final_weights = []
+
+for val in edited_df["Meter"]:
+
+    try:
+
+        if str(val).strip():
+
+            final_weights.append(
+                float(str(val).strip())
+            )
+
+    except:
+        pass
+
+# -----------------------------
+# SUMMARY CARDS
+# -----------------------------
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+    st.metric("Required", entry_count)
+
+with c2:
+    st.metric("Entered", len(final_weights))
+
+with c3:
+    st.metric(
+        "Total Meters",
+        f"{sum(final_weights):.2f}"
+        if final_weights else "0.00"
+    )
+
+with c4:
+    st.metric(
+        "Remaining",
+        entry_count - len(final_weights)
+    )
+
+
 
 # --- 2. BILLING DETAILS ---
-if final_weights:
+if len(final_weights) > 0:
     st.divider()
 
     # ── Load parties from parties.json (same folder as app) ──
