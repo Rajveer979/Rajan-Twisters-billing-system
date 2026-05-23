@@ -48,14 +48,9 @@ if (
         "Meter": [""] * entry_count
     })
 
-
-
-# -----------------------------
-# VERIFY / EDIT TABLE
-# -----------------------------
-
 edited_df = st.data_editor(
     st.session_state.meter_df,
+    key="meter_editor",
     use_container_width=True,
     hide_index=True,
     num_rows="fixed",
@@ -73,8 +68,7 @@ edited_df = st.data_editor(
     }
 )
 
-# Save updated table
-st.session_state.meter_df = edited_df
+
 
 # -----------------------------
 # PROCESS VALUES
