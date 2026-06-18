@@ -1,6 +1,5 @@
 import streamlit as st
 from google import genai
-from google.genai import types
 from fpdf import FPDF
 from PIL import Image
 import re
@@ -29,44 +28,92 @@ st.set_page_config(page_title="Rajan Twisters AI", layout="wide")
 # --- 1. METER ENTRY ---
 st.header("1. Meter Entry")
 
-
-
-# Select entry count
 entry_count = st.selectbox(
     "Select Meter Entry Count",
     [48, 96],
     index=0
 )
 
-# Initialize dataframe
-if (
-    "meter_df" not in st.session_state
-    or len(st.session_state.meter_df) != entry_count
-):
-    st.session_state.meter_df = pd.DataFrame({
-        "Sr No": range(1, entry_count + 1),
-        "Meter": [""] * entry_count
-    })
+tab_upload, tab_manual = st.tabs(["Upload Image", "Manual Entry"])
 
-edited_df = st.data_editor(
-    st.session_state.meter_df,
-    key="meter_editor",
-    use_container_width=True,
-    hide_index=True,
-    num_rows="fixed",
-    height=700,
-    column_config={
-        "Sr No": st.column_config.NumberColumn(
-            "Sr No",
-            disabled=True,
-            width="small"
-        ),
-        "Meter": st.column_config.TextColumn(
-            "Meter",
-            width="medium"
+with tab_upload:
+    st.subheader("Upload Meter Sheet Image")
+    uploaded_file = st.file_uploader("Choose a photo of the meter entry sheet", type=["jpg", "jpeg", "png"])
+
+    def extract_meters_from_image(image_file):
+        bytes_data = image_file.getvalue()
+        mime_type = "image/png" if image_file.type == "png" else "image/jpeg"
+        prompt = """
+        You are given a photo of a meter entry sheet. The sheet contains a column of numeric meter readings
+        (one per row). Extract all the numeric values in the order they appear, top to bottom.
+        Return ONLY a comma-separated list of integers, e.g. 125,130,128,...
+        If you cannot read a value, skip it. Do not include any extra text.
+        """
+        response = client.models.generate_content(
+            model=MODEL_ID,
+            contents=[
+                {"mime_type": mime_type, "data": base64.b64encode(bytes_data).decode()},
+                prompt
+            ]
         )
-    }
-)
+        text = response.text.strip()
+        try:
+            numbers = [int(x) for x in text.replace(" ", "").split(",") if x.isdigit()]
+            return numbers
+        except Exception:
+            return []
+
+    if uploaded_file is not None:
+        st.image(uploaded_file, caption="Uploaded Sheet", use_column_width=True)
+        if st.button("Extract Meters from Image"):
+            with st.spinner("Reading meters..."):
+                meters = extract_meters_from_image(uploaded_file)
+            if meters:
+                st.success(f"Extracted {len(meters)} meter values")
+                st.session_state["extracted_meters"] = meters
+            else:
+                st.warning("No meter values detected. Please try a clearer image.")
+
+with tab_manual:
+    st.subheader("Manual / Verified Entry")
+
+    # Initialize dataframe
+    if (
+        "meter_df" not in st.session_state
+        or len(st.session_state.meter_df) != entry_count
+    ):
+        st.session_state.meter_df = pd.DataFrame({
+            "Sr No": range(1, entry_count + 1),
+            "Meter": [""] * entry_count
+        })
+
+    if "extracted_meters" in st.session_state:
+        extracted = st.session_state.pop("extracted_meters")
+        if len(extracted) <= entry_count:
+            st.session_state.meter_df = pd.DataFrame({
+                "Sr No": range(1, len(extracted) + 1),
+                "Meter": extracted
+            })
+
+    edited_df = st.data_editor(
+        st.session_state.meter_df,
+        key="meter_editor",
+        use_container_width=True,
+        hide_index=True,
+        num_rows="fixed",
+        height=700,
+        column_config={
+            "Sr No": st.column_config.NumberColumn(
+                "Sr No",
+                disabled=True,
+                width="small"
+            ),
+            "Meter": st.column_config.TextColumn(
+                "Meter",
+                width="medium"
+            )
+        }
+    )
 
 
 
@@ -88,6 +135,7 @@ for val in edited_df["Meter"]:
     except:
         pass
 
+final_weights.sort()
 # -----------------------------
 # SUMMARY CARDS
 # -----------------------------
