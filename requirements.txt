@@ -1,4 +1,5 @@
-streamlit
+streamlit==1.46.1
 google-genai==1.66.0
-fpdf2
-Pillow
+fpdf2==2.8.3
+Pillow==11.3.0
+pandas==2.2.3
