@@ -116,14 +116,16 @@ if len(final_weights) > 0:
     st.divider()
 
     # ── Load parties from parties.json (same folder as app) ──
-    import json, os
-    parties = {}
-    parties_file = os.path.join(os.path.dirname(__file__), "parties.json")
-    try:
-        with open(parties_file, "r") as f:
-            parties = json.load(f)
-    except:
-        parties = {"-- Select Party --": {"address": "", "gstin": ""}}
+    import json
+    from pathlib import Path
+    parties_file = str(Path(__file__).resolve().parent / "parties.json")
+    if "parties" not in st.session_state:
+        try:
+            with open(parties_file, "r") as f:
+                st.session_state["parties"] = json.load(f)
+        except Exception:
+            st.session_state["parties"] = {"-- Select Party --": {"address": "", "gstin": "", "broker": ""}}
+    parties = st.session_state["parties"]
 
     # ── Party selector ──
     st.subheader("Select Party")
@@ -157,8 +159,12 @@ if len(final_weights) > 0:
                         "gstin":   np_gstin.strip(),
                         "broker":  np_broker.strip()
                     }
-                    with open(parties_file, "w") as f:
-                        json.dump(parties, f, indent=2, ensure_ascii=False)
+                    # Persist to file as backup
+                    try:
+                        with open(parties_file, "w") as f:
+                            json.dump(parties, f, indent=2, ensure_ascii=False)
+                    except Exception as e:
+                        st.warning(f"⚠️ Saved in session but could not write to file: {e}")
                     st.success(f"✅ '{np_name}' saved! Select from dropdown above.")
                     st.session_state["show_add_party"] = False
                     st.rerun()
