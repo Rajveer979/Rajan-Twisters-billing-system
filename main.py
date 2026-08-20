@@ -598,7 +598,7 @@ if len(final_weights) > 0:
             INFO_LBL   = 20
             INFO_VAL_L = LEFT_W - INFO_LBL
             INFO_VAL_R = RIGHT_W - INFO_LBL
-            pdf.set_font("Arial", '', 7)
+            pdf.set_font("Arial", 'B', 8)
             addr_max = INFO_VAL_L - 4
             words_a  = address.split()
             al1, al2 = "", ""
@@ -613,9 +613,9 @@ if len(final_weights) > 0:
 
             # ── Left info block ──
             left_info = [
-                ("M/s. :",  buyer,       7),
-                ("Add. :",  al1,         7),
-                ("",        al2,         6.5),
+                ("M/s. :",  buyer,       8),
+                ("Add. :",  al1,         8),
+                ("",        al2,         8),
                 ("GSTIN :", gstin_buyer, 7),
             ]
             for i, (lbl, val, fsz) in enumerate(left_info):
@@ -623,7 +623,7 @@ if len(final_weights) > 0:
                 pdf.set_xy(P2_M, iy)
                 pdf.set_font("Arial", 'B', 7)
                 pdf.cell(INFO_LBL, INFO_ROW_H, lbl, border=1, ln=0, align='L')
-                pdf.set_font("Arial", '', fsz)
+                pdf.set_font("Arial", 'B', fsz)
                 pdf.cell(INFO_VAL_L, INFO_ROW_H, f"  {val}", border=1, ln=0, align='L')
 
             # ── Right info block ──
