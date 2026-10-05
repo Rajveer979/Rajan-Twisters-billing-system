@@ -53,5 +53,16 @@
     "address": "2039 ABHISHEK TEXTILE MARKET",
     "gstin": "24AAKPL3924A1Z5",
     "broker": "Kanti morawala"
+  },
+  "VASTRA EXPORT": {
+    "address": "128, Shree Kuberji Silk Market",
+    "gstin": "24BCYPD4712M1Z9 ",
+    "broker": "Anish Bhai"
+  },
+  "INNOVATIVE CREATIONS": {
+    "address": "3032, AVADH TEXTILE MARKET 2",
+    "gstin": "24AAFHN3219K2Z7",
+    "broker": "Satybir Sharma"
   }
+  
 }
